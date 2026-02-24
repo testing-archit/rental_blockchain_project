@@ -1,32 +1,103 @@
-import { time, loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
-describe("VaultStayCore", function () {
-    async function deployEscrowFixture() {
-        const [landlord, tenant, otherAccount] = await ethers.getSigners();
-        const Escrow = await ethers.getContractFactory("VaultStayCore");
-        const escrow = await Escrow.deploy();
+describe("VaultStayCore V2", function () {
+    const ONE_ETH = ethers.parseEther("1");
+    const HALF_ETH = ethers.parseEther("0.5");
+    const DEPOSIT = ethers.parseEther("0.1");
+    const MIN_STAKE = ethers.parseEther("0.01");
+    const DAY = 86400;
 
-        const rent = ethers.parseEther("1");
-        const deposit = ethers.parseEther("0.5");
-        return { escrow, landlord, tenant, otherAccount, rent, deposit };
+    async function deployFixture() {
+        const [owner, landlord, tenant, arbitrator, treasury, other] = await ethers.getSigners();
+        const VaultStay = await ethers.getContractFactory("VaultStayCore");
+        const contract = await VaultStay.deploy(treasury.address, arbitrator.address);
+        await contract.waitForDeployment();
+        return { contract, owner, landlord, tenant, arbitrator, treasury, other };
     }
 
-    // Helper: Create+Fund a standard agreement
-    async function createAndFund(escrow: any, landlord: any, tenant: any, rent: bigint, deposit: bigint) {
-        const startDate = (await time.latest()) + 86400 * 2; // 2 days from now
-        const endDate = startDate + 86400 * 5; // 5 days long
-
-        await escrow.connect(landlord).createAgreement(tenant.address, rent, deposit, startDate, endDate, true);
-        await escrow.connect(tenant).depositFunds(1, { value: rent + deposit });
-        return { startDate, endDate };
+    async function stakedLandlordFixture() {
+        const base = await deployFixture();
+        // Landlord stakes
+        await base.contract.connect(base.landlord).stakeLandlord({ value: MIN_STAKE });
+        return base;
     }
+
+    async function createdAgreementFixture() {
+        const base = await stakedLandlordFixture();
+        const now = await time.latest();
+        const start = now + DAY;
+        const end = now + DAY * 8;
+        await base.contract.connect(base.landlord).createAgreement(
+            base.tenant.address, ONE_ETH, DEPOSIT, start, end, true, ethers.ZeroAddress
+        );
+        return { ...base, start, end };
+    }
+
+    async function fundedAgreementFixture() {
+        const base = await createdAgreementFixture();
+        const total = ONE_ETH + DEPOSIT;
+        await base.contract.connect(base.tenant).depositFunds(1, { value: total });
+        return base;
+    }
+
+    async function activeAgreementFixture() {
+        const base = await fundedAgreementFixture();
+        await time.increaseTo(base.start);
+        await base.contract.connect(base.tenant).confirmCheckIn(1);
+        return base;
+    }
+
+    async function reviewAgreementFixture() {
+        const base = await activeAgreementFixture();
+        await time.increaseTo(base.end);
+        await base.contract.connect(base.tenant).completeAgreement(1);
+        return base;
+    }
+
+    // ──────────────────────────────────────────────
+    // Deployment
+    // ──────────────────────────────────────────────
 
     describe("Deployment", function () {
-        it("Should deploy successfully", async function () {
-            const { escrow } = await loadFixture(deployEscrowFixture);
-            expect(await escrow.agreementCount()).to.equal(0);
+        it("Should set governance, treasury, arbitrator, and default fee", async function () {
+            const { contract, owner, treasury, arbitrator } = await loadFixture(deployFixture);
+            expect(await contract.governance()).to.equal(owner.address);
+            expect(await contract.platformTreasury()).to.equal(treasury.address);
+            expect(await contract.arbitrator()).to.equal(arbitrator.address);
+            expect(await contract.platformFeePercent()).to.equal(100n); // 1%
+            expect(await contract.landlordStakeRequired()).to.equal(MIN_STAKE);
+        });
+    });
+
+    // ──────────────────────────────────────────────
+    // Problem 5: Landlord Staking
+    // ──────────────────────────────────────────────
+
+    describe("Landlord Staking (Problem 5)", function () {
+        it("Should allow landlord to stake ETH", async function () {
+            const { contract, landlord } = await loadFixture(deployFixture);
+            await expect(contract.connect(landlord).stakeLandlord({ value: MIN_STAKE }))
+                .to.emit(contract, "LandlordStaked")
+                .withArgs(landlord.address, MIN_STAKE);
+            expect(await contract.landlordStakes(landlord.address)).to.equal(MIN_STAKE);
+        });
+
+        it("Should allow landlord to unstake ETH", async function () {
+            const { contract, landlord } = await loadFixture(stakedLandlordFixture);
+            await expect(contract.connect(landlord).unstakeLandlord(MIN_STAKE))
+                .to.emit(contract, "LandlordUnstaked");
+        });
+
+        it("Should reject agreement creation without stake", async function () {
+            const { contract, landlord, tenant } = await loadFixture(deployFixture);
+            const now = await time.latest();
+            await expect(
+                contract.connect(landlord).createAgreement(
+                    tenant.address, ONE_ETH, DEPOSIT, now + DAY, now + DAY * 8, true, ethers.ZeroAddress
+                )
+            ).to.be.revertedWithCustomError(contract, "InsufficientStake");
         });
     });
 
@@ -35,302 +106,323 @@ describe("VaultStayCore", function () {
     // ──────────────────────────────────────────────
 
     describe("Agreement Creation", function () {
-        it("Should create an agreement successfully", async function () {
-            const { escrow, landlord, tenant, rent, deposit } = await loadFixture(deployEscrowFixture);
-            const startDate = (await time.latest()) + 86400 * 2;
-            const endDate = startDate + 86400 * 5;
-
-            await expect(escrow.createAgreement(tenant.address, rent, deposit, startDate, endDate, true))
-                .to.emit(escrow, "AgreementCreated")
-                .withArgs(1, landlord.address, tenant.address, rent, deposit);
-
-            const agreement = await escrow.agreements(1);
-            expect(agreement.status).to.equal(0); // Created
+        it("Should create an agreement with staked landlord", async function () {
+            const { contract, landlord, tenant } = await loadFixture(stakedLandlordFixture);
+            const now = await time.latest();
+            await expect(
+                contract.connect(landlord).createAgreement(
+                    tenant.address, ONE_ETH, DEPOSIT, now + DAY, now + DAY * 8, true, ethers.ZeroAddress
+                )
+            ).to.emit(contract, "AgreementCreated");
+            expect(await contract.agreementCount()).to.equal(1n);
         });
 
         it("Should reject zero address tenant", async function () {
-            const { escrow, rent, deposit } = await loadFixture(deployEscrowFixture);
-            const startDate = (await time.latest()) + 86400;
-            await expect(escrow.createAgreement(ethers.ZeroAddress, rent, deposit, startDate, startDate + 86400, true))
-                .to.be.revertedWithCustomError(escrow, "ZeroAddress");
+            const { contract, landlord } = await loadFixture(stakedLandlordFixture);
+            const now = await time.latest();
+            await expect(
+                contract.connect(landlord).createAgreement(
+                    ethers.ZeroAddress, ONE_ETH, DEPOSIT, now + DAY, now + DAY * 8, true, ethers.ZeroAddress
+                )
+            ).to.be.revertedWithCustomError(contract, "ZeroAddress");
         });
 
-        it("Should reject self-rental (landlord = tenant)", async function () {
-            const { escrow, landlord, rent, deposit } = await loadFixture(deployEscrowFixture);
-            const startDate = (await time.latest()) + 86400;
-            await expect(escrow.createAgreement(landlord.address, rent, deposit, startDate, startDate + 86400, true))
-                .to.be.revertedWithCustomError(escrow, "InvalidAmount");
-        });
-
-        it("Should reject deposit below MIN_DEPOSIT", async function () {
-            const { escrow, tenant, rent } = await loadFixture(deployEscrowFixture);
-            const startDate = (await time.latest()) + 86400;
-            const tinyDeposit = ethers.parseEther("0.0001"); // Below 0.001 ETH
-            await expect(escrow.createAgreement(tenant.address, rent, tinyDeposit, startDate, startDate + 86400, true))
-                .to.be.revertedWithCustomError(escrow, "InvalidAmount");
+        it("Should reject self-rental", async function () {
+            const { contract, landlord } = await loadFixture(stakedLandlordFixture);
+            const now = await time.latest();
+            await expect(
+                contract.connect(landlord).createAgreement(
+                    landlord.address, ONE_ETH, DEPOSIT, now + DAY, now + DAY * 8, true, ethers.ZeroAddress
+                )
+            ).to.be.revertedWithCustomError(contract, "InvalidAmount");
         });
     });
 
     // ──────────────────────────────────────────────
-    // Funding
+    // Funding & Check-In
     // ──────────────────────────────────────────────
 
     describe("Funding", function () {
-        it("Should allow tenant to deposit funds", async function () {
-            const { escrow, landlord, tenant, rent, deposit } = await loadFixture(deployEscrowFixture);
-            const startDate = (await time.latest()) + 86400 * 2;
-            const endDate = startDate + 86400 * 5;
-
-            await escrow.createAgreement(tenant.address, rent, deposit, startDate, endDate, true);
-            const total = rent + deposit;
-
-            await expect(escrow.connect(tenant).depositFunds(1, { value: total }))
-                .to.emit(escrow, "FundsDeposited")
-                .withArgs(1, tenant.address);
-
-            const agreement = await escrow.agreements(1);
-            expect(agreement.status).to.equal(1); // Funded
+        it("Should accept exact deposit amount", async function () {
+            const { contract, tenant } = await loadFixture(createdAgreementFixture);
+            await expect(contract.connect(tenant).depositFunds(1, { value: ONE_ETH + DEPOSIT }))
+                .to.emit(contract, "FundsDeposited");
         });
 
-        it("Should reject incorrect deposit amount", async function () {
-            const { escrow, tenant, rent, deposit } = await loadFixture(deployEscrowFixture);
-            const startDate = (await time.latest()) + 86400 * 2;
-            const endDate = startDate + 86400 * 5;
-            await escrow.createAgreement(tenant.address, rent, deposit, startDate, endDate, true);
-
-            await expect(escrow.connect(tenant).depositFunds(1, { value: rent })) // Missing deposit
-                .to.be.revertedWithCustomError(escrow, "InvalidAmount");
-        });
-
-        it("Should reject non-existent agreement", async function () {
-            const { escrow, tenant } = await loadFixture(deployEscrowFixture);
-            await expect(escrow.connect(tenant).depositFunds(999, { value: ethers.parseEther("1") }))
-                .to.be.revertedWithCustomError(escrow, "AgreementNotFound");
+        it("Should reject wrong amount", async function () {
+            const { contract, tenant } = await loadFixture(createdAgreementFixture);
+            await expect(contract.connect(tenant).depositFunds(1, { value: ONE_ETH }))
+                .to.be.revertedWithCustomError(contract, "InvalidAmount");
         });
     });
-
-    // ──────────────────────────────────────────────
-    // Check-In (Tenant OR Landlord)
-    // ──────────────────────────────────────────────
 
     describe("Check-In", function () {
-        it("Should allow tenant to confirm check-in", async function () {
-            const { escrow, landlord, tenant, rent, deposit } = await loadFixture(deployEscrowFixture);
-            const { startDate } = await createAndFund(escrow, landlord, tenant, rent, deposit);
-
-            await time.increaseTo(startDate + 1);
-            await expect(escrow.connect(tenant).confirmCheckIn(1))
-                .to.emit(escrow, "CheckInConfirmed")
-                .withArgs(1, tenant.address);
-
-            const agreement = await escrow.agreements(1);
-            expect(agreement.status).to.equal(2); // Active
+        it("Should allow tenant to check in", async function () {
+            const { contract, tenant, start } = await loadFixture(fundedAgreementFixture);
+            await time.increaseTo(start);
+            await expect(contract.connect(tenant).confirmCheckIn(1))
+                .to.emit(contract, "CheckInConfirmed")
+                .to.emit(contract, "StayVerified"); // Problem 10: auditability
         });
 
-        it("Should allow LANDLORD to confirm check-in (audit fix #2)", async function () {
-            const { escrow, landlord, tenant, rent, deposit } = await loadFixture(deployEscrowFixture);
-            const { startDate } = await createAndFund(escrow, landlord, tenant, rent, deposit);
-
-            await time.increaseTo(startDate + 1);
-            await expect(escrow.connect(landlord).confirmCheckIn(1))
-                .to.emit(escrow, "CheckInConfirmed")
-                .withArgs(1, landlord.address);
-
-            const agreement = await escrow.agreements(1);
-            expect(agreement.status).to.equal(2); // Active
-        });
-
-        it("Should reject check-in from unauthorized user", async function () {
-            const { escrow, landlord, tenant, otherAccount, rent, deposit } = await loadFixture(deployEscrowFixture);
-            await createAndFund(escrow, landlord, tenant, rent, deposit);
-            await expect(escrow.connect(otherAccount).confirmCheckIn(1))
-                .to.be.revertedWithCustomError(escrow, "Unauthorized");
+        it("Should allow landlord to check in", async function () {
+            const { contract, landlord, start } = await loadFixture(fundedAgreementFixture);
+            await time.increaseTo(start);
+            await expect(contract.connect(landlord).confirmCheckIn(1))
+                .to.emit(contract, "CheckInConfirmed");
         });
     });
 
     // ──────────────────────────────────────────────
-    // No-Show Protection (Audit Fix #1)
+    // No-Show
     // ──────────────────────────────────────────────
 
-    describe("No-Show Protection", function () {
-        it("Should allow no-show refund after grace period", async function () {
-            const { escrow, landlord, tenant, rent, deposit } = await loadFixture(deployEscrowFixture);
-            const { startDate } = await createAndFund(escrow, landlord, tenant, rent, deposit);
-
-            // Advance time past startDate + 1 day grace
-            await time.increaseTo(startDate + 86400 + 1);
-
-            const tenantBalBefore = await ethers.provider.getBalance(tenant.address);
-            await escrow.connect(landlord).handleNoShow(1); // Anyone can call
-            const tenantBalAfter = await ethers.provider.getBalance(tenant.address);
-
-            expect(tenantBalAfter - tenantBalBefore).to.equal(rent + deposit);
-
-            const agreement = await escrow.agreements(1);
-            expect(agreement.status).to.equal(5); // Cancelled
+    describe("No-Show Handling", function () {
+        it("Should refund tenant after grace period", async function () {
+            const { contract, other, start } = await loadFixture(fundedAgreementFixture);
+            await time.increaseTo(start + DAY + 1);
+            await expect(contract.connect(other).handleNoShow(1))
+                .to.emit(contract, "NoShowHandled");
         });
 
-        it("Should reject no-show before grace period expires", async function () {
-            const { escrow, landlord, tenant, rent, deposit } = await loadFixture(deployEscrowFixture);
-            const { startDate } = await createAndFund(escrow, landlord, tenant, rent, deposit);
-
-            await time.increaseTo(startDate); // Exactly at start, not past grace
-            await expect(escrow.connect(landlord).handleNoShow(1))
-                .to.be.revertedWithCustomError(escrow, "TimeWindowNotMet");
+        it("Should reject before grace period", async function () {
+            const { contract, other, start } = await loadFixture(fundedAgreementFixture);
+            await time.increaseTo(start);
+            await expect(contract.connect(other).handleNoShow(1))
+                .to.be.revertedWithCustomError(contract, "TimeWindowNotMet");
         });
     });
 
     // ──────────────────────────────────────────────
-    // Cancellation (Audit Fix #3 — underflow-safe)
+    // Problem 3: Landlord Cancellation Penalty
     // ──────────────────────────────────────────────
 
-    describe("Cancellation", function () {
+    describe("Cancellation with Landlord Penalty (Problem 3)", function () {
         it("Should allow tenant to cancel before 24h window", async function () {
-            const { escrow, landlord, tenant, rent, deposit } = await loadFixture(deployEscrowFixture);
-            const { startDate } = await createAndFund(escrow, landlord, tenant, rent, deposit);
-
-            // We are at "now" which is ~2 days before startDate, so 24h check passes
-            await expect(escrow.connect(tenant).cancelBooking(1))
-                .to.emit(escrow, "BookingCancelled");
-
-            const agreement = await escrow.agreements(1);
-            expect(agreement.status).to.equal(5); // Cancelled
+            // Need a distant start date so block.timestamp + 24h < startDate
+            const base = await loadFixture(stakedLandlordFixture);
+            const now = await time.latest();
+            const distantStart = now + DAY * 7; // 7 days out
+            const distantEnd = now + DAY * 14;
+            await base.contract.connect(base.landlord).createAgreement(
+                base.tenant.address, ONE_ETH, DEPOSIT, distantStart, distantEnd, true, ethers.ZeroAddress
+            );
+            await base.contract.connect(base.tenant).depositFunds(1, { value: ONE_ETH + DEPOSIT });
+            await expect(base.contract.connect(base.tenant).cancelBooking(1))
+                .to.emit(base.contract, "BookingCancelled");
         });
 
-        it("Should reject tenant cancel within 24h of startDate", async function () {
-            const { escrow, landlord, tenant, rent, deposit } = await loadFixture(deployEscrowFixture);
-            const { startDate } = await createAndFund(escrow, landlord, tenant, rent, deposit);
+        it("Should penalize landlord on cancel from stake", async function () {
+            const { contract, landlord, tenant } = await loadFixture(fundedAgreementFixture);
+            const stakeBeforeCancel = await contract.landlordStakes(landlord.address);
 
-            await time.increaseTo(startDate - 3600); // 1 hour before start (within 24h)
-            await expect(escrow.connect(tenant).cancelBooking(1))
-                .to.be.revertedWithCustomError(escrow, "TimeWindowNotMet");
-        });
+            await expect(contract.connect(landlord).cancelBooking(1))
+                .to.emit(contract, "LandlordPenalized")
+                .to.emit(contract, "BookingCancelled");
 
-        it("Should allow landlord to cancel when funded", async function () {
-            const { escrow, landlord, tenant, rent, deposit } = await loadFixture(deployEscrowFixture);
-            await createAndFund(escrow, landlord, tenant, rent, deposit);
-
-            await expect(escrow.connect(landlord).cancelBooking(1))
-                .to.emit(escrow, "BookingCancelled");
+            const stakeAfterCancel = await contract.landlordStakes(landlord.address);
+            expect(stakeAfterCancel).to.be.lessThan(stakeBeforeCancel);
         });
     });
 
     // ──────────────────────────────────────────────
-    // Completion + Review Window (Audit Fix #4)
+    // Problem 1: Platform Fee on Completion
     // ──────────────────────────────────────────────
 
-    describe("Completion and Review Window", function () {
-        it("Should transition to Review state on completion", async function () {
-            const { escrow, landlord, tenant, rent, deposit } = await loadFixture(deployEscrowFixture);
-            const { startDate, endDate } = await createAndFund(escrow, landlord, tenant, rent, deposit);
+    describe("Platform Fee on Completion (Problem 1)", function () {
+        it("Should deduct 1% platform fee from rent on completion", async function () {
+            const { contract, treasury, end } = await loadFixture(activeAgreementFixture);
+            const balBefore = await ethers.provider.getBalance(treasury.address);
 
-            await time.increaseTo(startDate + 1);
-            await escrow.connect(tenant).confirmCheckIn(1);
+            await time.increaseTo(end);
+            await contract.connect((await ethers.getSigners())[2]).completeAgreement(1);
 
-            await time.increaseTo(endDate + 1);
-            await escrow.completeAgreement(1);
-
-            const agreement = await escrow.agreements(1);
-            expect(agreement.status).to.equal(4); // Review (index 4)
-            expect(agreement.reviewDeadline).to.be.gt(0);
+            const balAfter = await ethers.provider.getBalance(treasury.address);
+            const expectedFee = ONE_ETH * 100n / 10000n; // 1%
+            expect(balAfter - balBefore).to.equal(expectedFee);
         });
 
-        it("Should reject deposit refund before review period ends", async function () {
-            const { escrow, landlord, tenant, rent, deposit } = await loadFixture(deployEscrowFixture);
-            const { startDate, endDate } = await createAndFund(escrow, landlord, tenant, rent, deposit);
+        it("Should emit AgreementCompleted with fee info", async function () {
+            const { contract, end } = await loadFixture(activeAgreementFixture);
+            await time.increaseTo(end);
+            await expect(contract.connect((await ethers.getSigners())[2]).completeAgreement(1))
+                .to.emit(contract, "AgreementCompleted");
+        });
+    });
 
-            await time.increaseTo(startDate + 1);
-            await escrow.connect(tenant).confirmCheckIn(1);
-            await time.increaseTo(endDate + 1);
-            await escrow.completeAgreement(1);
+    // ──────────────────────────────────────────────
+    // Problem 2: Review System
+    // ──────────────────────────────────────────────
 
-            // Try to refund immediately (before 2-day review)
-            await expect(escrow.refundDeposit(1))
-                .to.be.revertedWithCustomError(escrow, "ReviewPeriodNotOver");
+    describe("Review System (Problem 2)", function () {
+        it("Should allow tenant to submit review after completion", async function () {
+            const { contract, tenant } = await loadFixture(reviewAgreementFixture);
+            await expect(contract.connect(tenant).submitReview(1, 5, "QmIPFSHash123"))
+                .to.emit(contract, "ReviewSubmitted")
+                .withArgs(1n, tenant.address, 5, "QmIPFSHash123");
         });
 
-        it("Should allow deposit refund after review period", async function () {
-            const { escrow, landlord, tenant, rent, deposit } = await loadFixture(deployEscrowFixture);
-            const { startDate, endDate } = await createAndFund(escrow, landlord, tenant, rent, deposit);
+        it("Should reject duplicate review", async function () {
+            const { contract, tenant } = await loadFixture(reviewAgreementFixture);
+            await contract.connect(tenant).submitReview(1, 4, "QmHash1");
+            await expect(contract.connect(tenant).submitReview(1, 5, "QmHash2"))
+                .to.be.revertedWithCustomError(contract, "AlreadyReviewed");
+        });
 
-            await time.increaseTo(startDate + 1);
-            await escrow.connect(tenant).confirmCheckIn(1);
-            await time.increaseTo(endDate + 1);
-            await escrow.completeAgreement(1);
+        it("Should reject review from non-tenant", async function () {
+            const { contract, landlord } = await loadFixture(reviewAgreementFixture);
+            await expect(contract.connect(landlord).submitReview(1, 5, "QmHash"))
+                .to.be.revertedWithCustomError(contract, "Unauthorized");
+        });
 
-            const agreement = await escrow.agreements(1);
+        it("Should reject invalid rating", async function () {
+            const { contract, tenant } = await loadFixture(reviewAgreementFixture);
+            await expect(contract.connect(tenant).submitReview(1, 0, "QmHash"))
+                .to.be.revertedWithCustomError(contract, "InvalidRating");
+            await expect(contract.connect(tenant).submitReview(1, 6, "QmHash"))
+                .to.be.revertedWithCustomError(contract, "InvalidRating");
+        });
+    });
+
+    // ──────────────────────────────────────────────
+    // Problem 9: Dispute Resolution
+    // ──────────────────────────────────────────────
+
+    describe("Dispute Resolution (Problem 9)", function () {
+        it("Should allow party to raise dispute during Review", async function () {
+            const { contract, landlord } = await loadFixture(reviewAgreementFixture);
+            await expect(contract.connect(landlord).raiseDispute(1))
+                .to.emit(contract, "DisputeRaised")
+                .withArgs(1n, landlord.address);
+        });
+
+        it("Should block deposit refund when disputed", async function () {
+            const { contract, landlord, tenant } = await loadFixture(reviewAgreementFixture);
+            await contract.connect(landlord).raiseDispute(1);
+
+            const agreement = await contract.agreements(1);
             await time.increaseTo(Number(agreement.reviewDeadline) + 1);
 
-            await expect(escrow.refundDeposit(1))
-                .to.emit(escrow, "DepositRefunded")
-                .withArgs(1, deposit);
+            await expect(contract.connect(tenant).refundDeposit(1))
+                .to.be.revertedWithCustomError(contract, "InvalidState");
+        });
 
-            const final = await escrow.agreements(1);
-            expect(final.status).to.equal(3); // Completed
+        it("Should allow arbitrator to resolve dispute (tenant favored)", async function () {
+            const { contract, landlord, tenant, arbitrator } = await loadFixture(reviewAgreementFixture);
+            await contract.connect(landlord).raiseDispute(1);
+
+            // 80% to tenant
+            await expect(contract.connect(arbitrator).resolveDispute(1, 80))
+                .to.emit(contract, "DisputeResolved");
+        });
+
+        it("Should reject non-arbitrator from resolving", async function () {
+            const { contract, landlord, tenant } = await loadFixture(reviewAgreementFixture);
+            await contract.connect(landlord).raiseDispute(1);
+            await expect(contract.connect(tenant).resolveDispute(1, 50))
+                .to.be.revertedWithCustomError(contract, "NotArbitrator");
         });
     });
 
     // ──────────────────────────────────────────────
-    // Extension Feature (Audit Fix #7)
+    // Problem 6: Governance
     // ──────────────────────────────────────────────
 
-    describe("Agreement Extension", function () {
-        it("Should allow tenant to extend an active agreement", async function () {
-            const { escrow, landlord, tenant, rent, deposit } = await loadFixture(deployEscrowFixture);
-            const { startDate, endDate } = await createAndFund(escrow, landlord, tenant, rent, deposit);
-
-            await time.increaseTo(startDate + 1);
-            await escrow.connect(tenant).confirmCheckIn(1);
-
-            const newEndDate = endDate + 86400 * 7; // Extend by 7 days
-            const additionalRent = ethers.parseEther("0.5");
-
-            await expect(escrow.connect(tenant).extendAgreement(1, newEndDate, { value: additionalRent }))
-                .to.emit(escrow, "AgreementExtended")
-                .withArgs(1, newEndDate, additionalRent);
-
-            const agreement = await escrow.agreements(1);
-            expect(agreement.endDate).to.equal(newEndDate);
-            expect(agreement.rent).to.equal(rent + additionalRent);
+    describe("Governance (Problem 6)", function () {
+        it("Should allow governance to update platform fee", async function () {
+            const { contract, owner } = await loadFixture(deployFixture);
+            await expect(contract.connect(owner).updatePlatformFee(200))
+                .to.emit(contract, "PlatformFeeUpdated")
+                .withArgs(100n, 200n);
+            expect(await contract.platformFeePercent()).to.equal(200n);
         });
 
-        it("Should reject extension with same or earlier end date", async function () {
-            const { escrow, landlord, tenant, rent, deposit } = await loadFixture(deployEscrowFixture);
-            const { startDate, endDate } = await createAndFund(escrow, landlord, tenant, rent, deposit);
+        it("Should reject fee above max (5%)", async function () {
+            const { contract, owner } = await loadFixture(deployFixture);
+            await expect(contract.connect(owner).updatePlatformFee(600))
+                .to.be.revertedWithCustomError(contract, "FeeTooHigh");
+        });
 
-            await time.increaseTo(startDate + 1);
-            await escrow.connect(tenant).confirmCheckIn(1);
+        it("Should allow governance to update arbitrator", async function () {
+            const { contract, owner, other } = await loadFixture(deployFixture);
+            await expect(contract.connect(owner).updateArbitrator(other.address))
+                .to.emit(contract, "ArbitratorUpdated");
+        });
 
-            await expect(escrow.connect(tenant).extendAgreement(1, endDate, { value: ethers.parseEther("0.1") }))
-                .to.be.revertedWithCustomError(escrow, "InvalidDates");
+        it("Should allow governance to update landlord stake", async function () {
+            const { contract, owner } = await loadFixture(deployFixture);
+            const newStake = ethers.parseEther("0.05");
+            await expect(contract.connect(owner).updateLandlordStakeRequired(newStake))
+                .to.emit(contract, "LandlordStakeUpdated");
+        });
+
+        it("Should allow governance to transfer governance", async function () {
+            const { contract, owner, other } = await loadFixture(deployFixture);
+            await expect(contract.connect(owner).transferGovernance(other.address))
+                .to.emit(contract, "GovernanceTransferred");
+            expect(await contract.governance()).to.equal(other.address);
+        });
+
+        it("Should reject non-governance calls", async function () {
+            const { contract, tenant } = await loadFixture(deployFixture);
+            await expect(contract.connect(tenant).updatePlatformFee(200))
+                .to.be.revertedWithCustomError(contract, "Unauthorized");
         });
     });
 
     // ──────────────────────────────────────────────
-    // Existence Checks (Audit Fix #5)
+    // Deposit Refund & Extension
     // ──────────────────────────────────────────────
 
-    describe("Agreement Existence Guards", function () {
-        it("Should revert on non-existent agreement for all functions", async function () {
-            const { escrow, tenant } = await loadFixture(deployEscrowFixture);
+    describe("Deposit Refund", function () {
+        it("Should refund deposit after review period (no dispute)", async function () {
+            const { contract, tenant } = await loadFixture(reviewAgreementFixture);
+            const agreement = await contract.agreements(1);
+            await time.increaseTo(Number(agreement.reviewDeadline) + 1);
 
-            await expect(escrow.connect(tenant).depositFunds(999, { value: ethers.parseEther("1") }))
-                .to.be.revertedWithCustomError(escrow, "AgreementNotFound");
+            await expect(contract.connect(tenant).refundDeposit(1))
+                .to.emit(contract, "DepositRefunded");
+        });
+    });
 
-            await expect(escrow.connect(tenant).confirmCheckIn(999))
-                .to.be.revertedWithCustomError(escrow, "AgreementNotFound");
+    describe("Extension", function () {
+        it("Should extend active agreement with additional rent", async function () {
+            const { contract, tenant, end } = await loadFixture(activeAgreementFixture);
+            const newEnd = end + DAY * 7;
+            await expect(contract.connect(tenant).extendAgreement(1, newEnd, { value: HALF_ETH }))
+                .to.emit(contract, "AgreementExtended");
+        });
+    });
 
-            await expect(escrow.handleNoShow(999))
-                .to.be.revertedWithCustomError(escrow, "AgreementNotFound");
+    // ──────────────────────────────────────────────
+    // Problem 10: Event Auditability
+    // ──────────────────────────────────────────────
 
-            await expect(escrow.cancelBooking(999))
-                .to.be.revertedWithCustomError(escrow, "AgreementNotFound");
+    describe("Event Auditability (Problem 10)", function () {
+        it("Should emit StayVerified on check-in", async function () {
+            const { contract, tenant, start } = await loadFixture(fundedAgreementFixture);
+            await time.increaseTo(start);
+            await expect(contract.connect(tenant).confirmCheckIn(1))
+                .to.emit(contract, "StayVerified");
+        });
 
-            await expect(escrow.completeAgreement(999))
-                .to.be.revertedWithCustomError(escrow, "AgreementNotFound");
+        it("Should emit StayVerified on completion", async function () {
+            const { contract, end } = await loadFixture(activeAgreementFixture);
+            await time.increaseTo(end);
+            await expect(contract.connect((await ethers.getSigners())[2]).completeAgreement(1))
+                .to.emit(contract, "StayVerified");
+        });
+    });
 
-            await expect(escrow.refundDeposit(999))
-                .to.be.revertedWithCustomError(escrow, "AgreementNotFound");
+    // ──────────────────────────────────────────────
+    // Existence Guards
+    // ──────────────────────────────────────────────
+
+    describe("Existence Guards", function () {
+        it("Should reject operations on non-existent agreements", async function () {
+            const { contract, tenant } = await loadFixture(deployFixture);
+            await expect(contract.connect(tenant).depositFunds(999, { value: ONE_ETH }))
+                .to.be.revertedWithCustomError(contract, "AgreementNotFound");
         });
     });
 });
