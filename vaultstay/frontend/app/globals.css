@@ -3,11 +3,54 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
   body {
     @apply bg-background text-white antialiased;
     background-image: radial-gradient(circle at 50% 0%, rgba(108, 92, 231, 0.15), transparent 70%);
     background-origin: border-box;
     background-attachment: fixed;
+    overflow-x: hidden;
+  }
+
+  /* Prevent layout shifts from scrollbar */
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #0A0A0F;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(108, 92, 231, 0.4);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(108, 92, 231, 0.7);
+  }
+
+  /* Smooth image rendering */
+  img {
+    image-rendering: auto;
+  }
+
+  /* Universal box sizing */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
   }
 }
 
@@ -15,7 +58,7 @@
   .glass-panel {
     @apply bg-card/60 backdrop-blur-xl border border-white/10 shadow-2xl;
   }
-  
+
   .glass-panel-hover {
     @apply glass-panel hover:bg-card/80 hover:border-primary/50 transition-all duration-300;
   }
@@ -27,8 +70,24 @@
   .neon-glow {
     box-shadow: 0 0 15px rgba(108, 92, 231, 0.3), 0 0 30px rgba(0, 245, 212, 0.1);
   }
-  
+
   .neon-border {
-    @apply border border-primary/50 hover:border-secondary/80 hover:shadow-[0_0_15px_rgba(0,245,212,0.4)] transition-all duration-300;
+    @apply border border-primary/50 hover:border-secondary/80 hover:shadow-[0_0_15px_rgba(0, 245, 212, 0.4)] transition-all duration-300;
+  }
+
+  /* Responsive container padding utility */
+  .section-padding {
+    @apply px-4 sm:px-6 md:px-8 lg:px-12;
+  }
+
+  /* Safe area for modern mobile devices */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  /* GPU-accelerated transforms */
+  .gpu-accelerate {
+    transform: translateZ(0);
+    will-change: transform;
   }
 }

@@ -48,7 +48,7 @@ function StatsBanner({ agreements, userAddress }: { agreements: any[]; userAddre
     const totalVolume = agreements.reduce((acc, a) => acc + parseFloat(formatEther(BigInt(a.rent))), 0);
 
     return (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-10">
             {[
                 { label: "As Landlord", value: asLandlord.length, icon: Home },
                 { label: "As Tenant", value: asTenant.length, icon: Users },
@@ -206,9 +206,9 @@ export default function Dashboard() {
     return (
         <>
             <ToastContainer toasts={toasts} />
-            <div className="max-w-6xl mx-auto px-6 py-12">
+            <div className="max-w-6xl mx-auto section-padding py-8 sm:py-12">
                 <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-                    <h1 className="text-4xl font-display font-bold">Dashboard</h1>
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold">Dashboard</h1>
                     <p className="text-white/50 mt-1 text-sm">Manage all your escrow agreements</p>
                 </motion.div>
 
@@ -221,8 +221,8 @@ export default function Dashboard() {
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`px-5 py-2 rounded-lg text-sm font-medium capitalize transition-all ${activeTab === tab
-                                    ? "bg-primary text-white shadow-lg shadow-primary/30"
-                                    : "text-white/50 hover:text-white"
+                                ? "bg-primary text-white shadow-lg shadow-primary/30"
+                                : "text-white/50 hover:text-white"
                                 }`}
                         >
                             {tab === "all" ? "All Agreements" : tab === "landlord" ? "My Listings" : "My Stays"}
@@ -236,7 +236,7 @@ export default function Dashboard() {
                         <span>Loading agreements from chain...</span>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         <AnimatePresence>
                             {filtered.map((a, i) => {
                                 const role = a.landlord.toLowerCase() === address?.toLowerCase() ? "Landlord" : "Tenant";

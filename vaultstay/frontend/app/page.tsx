@@ -7,12 +7,12 @@ import Image from "next/image";
 
 export default function Home() {
   return (
-    <div className="min-h-screen relative overflow-hidden flex flex-col pt-32 pb-20">
+    <div className="min-h-screen relative overflow-hidden flex flex-col pt-24 sm:pt-32 pb-12 sm:pb-20">
       {/* Background elements */}
       <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-background to-background"></div>
 
       {/* ─── Hero Section ─── */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12 flex flex-col lg:flex-row items-center gap-16 mb-32">
+      <div className="relative z-10 max-w-7xl mx-auto section-padding flex flex-col lg:flex-row items-center gap-8 sm:gap-12 lg:gap-16 mb-16 sm:mb-24 lg:mb-32">
         <motion.div
           className="flex-1 space-y-8"
           initial={{ opacity: 0, x: -50 }}
@@ -24,12 +24,12 @@ export default function Home() {
             Decentralized Escrow Live on Sepolia
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-display font-bold leading-tight">
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-display font-bold leading-tight">
             Trustless Rentals. <br />
             <span className="text-gradient">Automated Escrow.</span>
           </h1>
 
-          <p className="text-lg md:text-xl text-white/70 max-w-2xl font-sans font-light leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-white/70 max-w-2xl font-sans font-light leading-relaxed">
             VaultStay is the next-generation protocol for short stays and long-term leases. Eliminate custodial middlemen and let smart contracts unconditionally secure your funds.
           </p>
 
@@ -53,8 +53,8 @@ export default function Home() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-3xl blur-xl opacity-20 animate-pulse-slow"></div>
-          <div className="relative aspect-square md:aspect-[4/3] rounded-3xl overflow-hidden glass-panel border border-white/10 shadow-2xl">
+          <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-3xl blur-xl opacity-20 animate-pulse-slow hidden sm:block"></div>
+          <div className="relative aspect-[4/3] sm:aspect-square md:aspect-[4/3] rounded-2xl sm:rounded-3xl overflow-hidden glass-panel border border-white/10 shadow-2xl">
             <Image
               src="/images/hero.png"
               alt="VaultStay Cyberpunk Hero"
@@ -75,13 +75,13 @@ export default function Home() {
       </div>
 
       {/* ─── Bento Grid Features ─── */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12 mb-32" id="features">
+      <div className="relative z-10 max-w-7xl mx-auto section-padding mb-16 sm:mb-24 lg:mb-32" id="features">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-4xl font-display font-bold mb-6">The VaultStay Advantage</h2>
-          <p className="text-lg text-white/50">Designed around strict Web3 principles, our protocol redefines how peers handle high-stakes rental agreements securely.</p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold mb-4 sm:mb-6">The VaultStay Advantage</h2>
+          <p className="text-base sm:text-lg text-white/50">Designed around strict Web3 principles, our protocol redefines how peers handle high-stakes rental agreements securely.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-6 auto-rows-[300px]">
+        <div className="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-4 sm:gap-6 auto-rows-[240px] sm:auto-rows-[300px]">
           {/* Large Feature 1 */}
           <motion.div
             initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
@@ -129,13 +129,13 @@ export default function Home() {
       </div>
 
       {/* ─── Competitor Comparison ─── */}
-      <div className="relative z-10 max-w-5xl mx-auto px-6 md:px-12 mb-32" id="comparisons">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-display font-bold mb-6">VaultStay vs Competitors</h2>
-          <p className="text-lg text-white/50">Why decentralized smart contracts beat the legacy hospitality industry.</p>
+      <div className="relative z-10 max-w-5xl mx-auto section-padding mb-16 sm:mb-24 lg:mb-32" id="comparisons">
+        <div className="text-center mb-10 sm:mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold mb-4 sm:mb-6">VaultStay vs Competitors</h2>
+          <p className="text-base sm:text-lg text-white/50">Why decentralized smart contracts beat the legacy hospitality industry.</p>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr>
@@ -170,16 +170,16 @@ export default function Home() {
         </div>
       </div>
       {/* ─── Academic Problem Analysis & Design ─── */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12 mb-32" id="academic">
-        <div className="text-center max-w-3xl mx-auto mb-16">
+      <div className="relative z-10 max-w-7xl mx-auto section-padding mb-16 sm:mb-24 lg:mb-32" id="academic">
+        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-panel border-white/10 text-white/70 text-sm font-medium tracking-wide mb-6">
             <GraduationCap size={16} className="text-primary" /> Academic Research Framework
           </div>
-          <h2 className="text-4xl font-display font-bold mb-6">Problem Analysis & System Design</h2>
-          <p className="text-lg text-white/50">Addressing core inefficiencies in centralized hospitality through algorithmic decentralization.</p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold mb-4 sm:mb-6">Problem Analysis & System Design</h2>
+          <p className="text-base sm:text-lg text-white/50">Addressing core inefficiencies in centralized hospitality through algorithmic decentralization.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Card 1: Problem Domain */}
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden group hover:border-red-500/30 transition-colors">
             <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-bl-full blur-2xl group-hover:bg-red-500/20 transition-colors"></div>
@@ -219,14 +219,14 @@ export default function Home() {
       </div>
 
       {/* ─── Business Model ─── */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12 mb-32" id="business">
-        <div className="glass-panel border border-white/10 rounded-[2.5rem] p-8 md:p-16 relative overflow-hidden group">
+      <div className="relative z-10 max-w-7xl mx-auto section-padding mb-16 sm:mb-24 lg:mb-32" id="business">
+        <div className="glass-panel border border-white/10 rounded-2xl sm:rounded-[2.5rem] p-6 sm:p-8 md:p-16 relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-50 group-hover:opacity-100 transition-opacity duration-1000"></div>
 
-          <div className="relative z-10 flex flex-col xl:flex-row gap-12 lg:gap-24 items-center">
+          <div className="relative z-10 flex flex-col xl:flex-row gap-8 sm:gap-12 lg:gap-24 items-center">
             <div className="flex-1 space-y-8">
               <div className="inline-flex items-center gap-2 text-primary font-bold tracking-widest text-sm uppercase">Business Model Canvas</div>
-              <h2 className="text-4xl md:text-5xl font-display font-bold">Disrupting a <span className="text-gradient drop-shadow-[0_0_20px_rgba(108,92,231,0.5)]"> $100B Market</span></h2>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-bold">Disrupting a <span className="text-gradient drop-shadow-[0_0_20px_rgba(108,92,231,0.5)]"> $100B Market</span></h2>
               <p className="text-xl text-white/60 font-light leading-relaxed">
                 VaultStay replaces the high-overhead corporate hospitality model with hyper-efficient computational architecture, enabling 0% base fees for a massive competitive advantage.
               </p>
@@ -260,7 +260,7 @@ export default function Home() {
       </div>
 
       {/* ─── Global Call To Action ─── */}
-      <div className="relative z-10 text-center mb-24">
+      <div className="relative z-10 text-center mb-12 sm:mb-24 section-padding">
         <Link href="/dashboard">
           <button className="px-10 py-5 rounded-2xl bg-white text-black font-bold text-lg hover:bg-white/90 transition-transform hover:scale-105 shadow-[0_0_40px_rgba(255,255,255,0.2)]">
             Start Hosting / Renting Now

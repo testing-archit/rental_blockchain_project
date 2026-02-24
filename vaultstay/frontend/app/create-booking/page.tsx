@@ -76,14 +76,14 @@ export default function CreateBooking() {
     };
 
     return (
-        <div className="max-w-2xl mx-auto px-6 py-12">
+        <div className="max-w-2xl mx-auto section-padding py-8 sm:py-12">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-panel p-8 rounded-3xl"
+                className="glass-panel p-5 sm:p-8 rounded-2xl sm:rounded-3xl"
             >
-                <h2 className="text-3xl font-display font-bold mb-2">Create New Booking</h2>
-                <p className="text-white/60 mb-8">Deploy a trustless escrow agreement on the blockchain.</p>
+                <h2 className="text-2xl sm:text-3xl font-display font-bold mb-2">Create New Booking</h2>
+                <p className="text-white/60 mb-6 sm:mb-8 text-sm sm:text-base">Deploy a trustless escrow agreement on the blockchain.</p>
 
                 {successMsg && (
                     <div className="bg-success/20 border border-success/50 p-4 rounded-xl text-success mb-6">
@@ -106,7 +106,7 @@ export default function CreateBooking() {
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-white/80 flex items-center gap-2">
                                 <Banknote size={16} /> Total Rent (ETH)
@@ -137,7 +137,7 @@ export default function CreateBooking() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-white/80 flex items-center gap-2">
                                 <Calendar size={16} /> Start Date
