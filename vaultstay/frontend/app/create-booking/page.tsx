@@ -3,10 +3,14 @@
 import { useState } from "react";
 import { useEscrowContract } from "@/lib/contract";
 import { motion } from "framer-motion";
-import { Calendar, Wallet, CheckSquare, Banknote } from "lucide-react";
+import { Calendar, Wallet, CheckSquare, Banknote, Fuel, RefreshCw } from "lucide-react";
+import { usePublicClient } from "wagmi";
+import { parseEther, formatEther } from "viem";
+import { ESCROW_ABI, ESCROW_CONTRACT_ADDRESS } from "@/lib/constants";
 
 export default function CreateBooking() {
-    const { createAgreement } = useEscrowContract();
+    const { createAgreement, address } = useEscrowContract();
+    const publicClient = usePublicClient();
 
     const [tenant, setTenant] = useState("");
     const [rent, setRent] = useState("");
@@ -16,6 +20,41 @@ export default function CreateBooking() {
     const [type, setType] = useState<boolean>(true); // true = Short Term, false = Long Term
     const [isLoading, setIsLoading] = useState(false);
     const [successMsg, setSuccessMsg] = useState("");
+
+    const [gasEstimate, setGasEstimate] = useState<string | null>(null);
+    const [isEstimating, setIsEstimating] = useState(false);
+
+    const handleEstimateGas = async () => {
+        if (!tenant || !rent || !deposit || !startDate || !endDate || !publicClient || !address) {
+            alert("Please fill in all fields to estimate gas.");
+            return;
+        }
+        try {
+            setIsEstimating(true);
+            setGasEstimate(null);
+
+            const startUnix = Math.floor(new Date(startDate).getTime() / 1000);
+            const endUnix = Math.floor(new Date(endDate).getTime() / 1000);
+
+            const gas = await publicClient.estimateContractGas({
+                address: ESCROW_CONTRACT_ADDRESS as `0x${string}`,
+                abi: ESCROW_ABI,
+                functionName: "createAgreement",
+                args: [tenant, parseEther(rent), parseEther(deposit), startUnix, endUnix, type],
+                account: address as `0x${string}`,
+            });
+
+            const gasPriceVal = await publicClient.getGasPrice();
+            const totalCostWei = gas * gasPriceVal;
+
+            setGasEstimate(Number(formatEther(totalCostWei)).toFixed(6));
+        } catch (error: any) {
+            console.error(error);
+            alert("Estimation failed. Make sure the tenant address is valid.");
+        } finally {
+            setIsEstimating(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -143,6 +182,29 @@ export default function CreateBooking() {
                                 Long Term (30+ Days)
                             </button>
                         </div>
+                    </div>
+
+                    {/* Gas Estimation Box */}
+                    <div className="bg-black/20 border border-white/5 rounded-xl p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-secondary/10 text-secondary rounded-lg">
+                                <Fuel size={20} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-white/80">Estimated Network Fee</p>
+                                <p className="text-xs text-white/50">
+                                    {gasEstimate ? `~ ${gasEstimate} ETH` : "Not calculated yet"}
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleEstimateGas}
+                            disabled={isEstimating || !tenant || !rent || !deposit || !startDate || !endDate}
+                            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+                        >
+                            {isEstimating ? <RefreshCw size={14} className="animate-spin" /> : "Estimate"}
+                        </button>
                     </div>
 
                     <button
