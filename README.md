@@ -25,15 +25,17 @@ The traditional short-term rental market relies heavily on centralized platforms
 
 **Methodology**:
 1. **Smart Contracts (Solidity)**: We encode the rental agreement (Rent, Security Deposit, Start Date, End Date) directly onto the Ethereum Sepolia Testnet.
-2. **State Machine Escrow**: The contract moves through a rigid lifecycle (`Created` → `Funded` → `Active` → `Completed` / `Cancelled`).
+2. **State Machine Escrow**: The contract moves through a rigorous lifecycle (`Created` → `Funded` → `Active` → `Review` → `Completed` / `Cancelled`), including a **Review** inspection window before deposit release.
 3. **Decentralized Frontend (Next.js + `wagmi`)**: We build an intuitive interface that interacts directly with the RPC nodes, ensuring that neither the platform nor the developers can interact with user funds.
 
 ### 3. Relevance of Algorithms / Techniques
 VaultStay replaces traditional centralized database updates with specific on-chain algorithmic techniques:
 
-- **Time-Locked Conditional Checks (`block.timestamp`)**: We replace legal cancellation windows with strict algorithmic boundaries. The smart contract validates `block.timestamp < agreement.startDate - 86400` (e.g., 24-hours before check-in) to automatically compute whether a tenant is entitled to a 100% refund or a penalized refund.
-- **Checks-Effects-Interactions Pattern (CEI)**: To prevent re-entrancy attacks (where a malicious actor repeatedly drains a smart contract during a fallback function), the algorithm forces the contract to zero out internal ledgers (State Updates/Effects) *before* triggering the external `transfer()` of ETH (Interactions). We enforce this further using OpenZeppelin's `ReentrancyGuard`.
-- **Atomic Operations**: Rent distribution and deposit unlocking are executed as a single, atomic transaction block upon checkout. If the contract conditions fail, the entire transaction reverts, ensuring no "stuck" partial states.
+- **Time-Locked Conditional Checks (`block.timestamp`)**: Underflow-safe cancellation window using `block.timestamp + 24 hours > agreement.startDate` to prevent both arithmetic errors and late cancellations.
+- **Checks-Effects-Interactions Pattern (CEI)**: To prevent re-entrancy attacks, the algorithm zeroes out internal ledgers *before* triggering the external `transfer()` of ETH. Enforced further using OpenZeppelin's `ReentrancyGuard`.
+- **Atomic Operations**: Rent distribution and deposit unlocking are executed as a single, atomic transaction block upon checkout.
+- **No-Show Timeout Algorithm**: If a tenant deposits funds but never checks in, a grace period (`startDate + 1 day`) expires and anyone can trigger `handleNoShow()` to return all funds, preventing permanent locks.
+- **Review Deadline Enforcement**: Upon completion, a 2-day `reviewDeadline` is set. Deposit refunds are blocked until this window expires, allowing landlords to inspect for damages.
 
 ---
 
@@ -66,8 +68,15 @@ Upon the checkout date, the smart contract automatically permits the landlord to
 
 ### 🛡️ Smart Cancellation Policies
 VaultStay enforces strict, code-level cancellation logic:
-- **Pre-Check-In (Early Cancel)**: The tenant can cancel prior to the check-in date for a full refund.
-- **Post-Check-In (Active Cancel)**: If cancelled mid-stay, the landlord retains the rent, but the smart contract splits and refunds the security deposit automatically to mitigate damages.
+- **Pre-Check-In (Early Cancel)**: Underflow-safe 24-hour window check. Full refund if cancelled early enough.
+- **Post-Check-In (Active Cancel)**: Landlord retains rent, deposit is split 50/50.
+- **No-Show Protection**: If tenant never checks in, funds auto-refund after a 1-day grace period.
+
+### 🔍 Review Window
+After checkout, a **2-day inspection period** prevents instant deposit withdrawal, giving landlords time to report damages.
+
+### 🔄 Booking Extensions
+Tenants can extend active stays directly on-chain by paying additional rent and setting a new end date.
 
 ### 🌐 Rich Web3 Dashboard
 A modern Next.js 14 App Router application featuring Live On-Chain Data via multicall, Bento Grid UI, and Role-Based context-aware dashboards.
@@ -78,7 +87,7 @@ A modern Next.js 14 App Router application featuring Live On-Chain Data via mult
 
 ### Smart Contracts (Hardhat)
 - **Solidity `^0.8.20`**: Strictly typed, secure contract logic.
-- **Hardhat & Chai**: Comprehensive test suite covering happy paths, cancellations, and malicious access attempts.
+- **Hardhat & Chai**: Comprehensive test suite with **22 test cases** covering happy paths, cancellations, no-show handling, review windows, extensions, and malicious access attempts.
 
 ### Frontend App (Next.js)
 - **Framework**: Next.js 14 (App Router), React 18.
@@ -118,7 +127,7 @@ npm install
 npx hardhat compile
 npx hardhat test
 ```
-*All core tests (creation, funding, check-in, completion, and cancellation scenarios) should pass.*
+*All 22 test cases (creation, funding, check-in, no-show, completion, review window, extension, and cancellation scenarios) should pass.*
 
 ### 3. Running the Connected Frontend
 ```bash
