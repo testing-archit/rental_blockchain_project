@@ -8,13 +8,61 @@ Unlike centralized hospitality platforms (like Airbnb or Booking.com) that act a
 
 ---
 
+## 🎓 Academic Problem Analysis & Design
+
+This project is constructed to address specific criteria in modern decentralized systems architecture:
+
+### 1. Problem Domain Identification and Analysis
+The traditional short-term rental market relies heavily on centralized platforms that act as mandatory financial intermediaries. These platforms introduce significant friction:
+- **Custodial Risk**: Centralized entities hold both the renter's deposit and the host's revenue, creating single points of failure and extending payout wait times by 3-5 business days.
+- **High Fees**: Monopolistic platforms charge an average of 15%–20% in service fees split between the host and the tenant.
+- **Arbitrary Dispute Resolution**: The platform reserves the right to freeze accounts or deny refunds based on opaque internal policies rather than concrete, agreed-upon terms.
+
+**The core problem**: How do we remove the intermediary in high-trust peer-to-peer property rentals while mathematically guaranteeing the safety of the tenant's deposit and the landlord's rent?
+
+### 2. Objectives and Methodology of the Proposed Work
+**Objective**: To build a trustless, non-custodial Web3 application that replaces the human middleman with an automated, block-time-based smart contract escrow.
+
+**Methodology**:
+1. **Smart Contracts (Solidity)**: We encode the rental agreement (Rent, Security Deposit, Start Date, End Date) directly onto the Ethereum Sepolia Testnet.
+2. **State Machine Escrow**: The contract moves through a rigid lifecycle (`Created` → `Funded` → `Active` → `Completed` / `Cancelled`).
+3. **Decentralized Frontend (Next.js + `wagmi`)**: We build an intuitive interface that interacts directly with the RPC nodes, ensuring that neither the platform nor the developers can interact with user funds.
+
+### 3. Relevance of Algorithms / Techniques
+VaultStay replaces traditional centralized database updates with specific on-chain algorithmic techniques:
+
+- **Time-Locked Conditional Checks (`block.timestamp`)**: We replace legal cancellation windows with strict algorithmic boundaries. The smart contract validates `block.timestamp < agreement.startDate - 86400` (e.g., 24-hours before check-in) to automatically compute whether a tenant is entitled to a 100% refund or a penalized refund.
+- **Checks-Effects-Interactions Pattern (CEI)**: To prevent re-entrancy attacks (where a malicious actor repeatedly drains a smart contract during a fallback function), the algorithm forces the contract to zero out internal ledgers (State Updates/Effects) *before* triggering the external `transfer()` of ETH (Interactions). We enforce this further using OpenZeppelin's `ReentrancyGuard`.
+- **Atomic Operations**: Rent distribution and deposit unlocking are executed as a single, atomic transaction block upon checkout. If the contract conditions fail, the entire transaction reverts, ensuring no "stuck" partial states.
+
+---
+
+## 💼 Business Model
+
+VaultStay aims to disrupt the $100B+ short-term rental market by competing strictly on efficiency and fee reduction.
+
+**1. Revenue Generation Strategy**
+- **Freemium Protocol / Fixed Gas Subsidies**: VaultStay charges a flat **0% commission fee** on the actual rent or deposit amounts (disrupting Airbnb's 15%).
+- **Premium Up-Sells**: Revenue is instead generated via optional premium features:
+  - **Reputation Passports**: Verified badges generated via Zero-Knowledge (ZK) proofs to establish trust histories for tenants/landlords without revealing personal data (subscription model).
+  - **Fiat On-Ramps**: Integrating third-party providers (like Stripe or MoonPay) to allow users to pay via Credit Card while settling in ETH on-chain, taking a 1% convenience fee.
+
+**2. Target Audience**
+- **Crypto-Native Nomads**: Remote workers who are already paid in crypto and want to rent housing without converting to fiat.
+- **Independent Landlords**: Property owners tired of high platform take-rates and delayed payouts.
+
+**3. Cost Structure**
+- Near-zero infrastructure costs. By hosting the database state entirely on the Ethereum network, server hosting costs are reduced only to the lightweight Next.js front-end. 
+
+---
+
 ## 🌟 Key Features
 
 ### 🔒 Trustless Escrow
-Rent and security deposits are locked in the `VaultStayCore` smart contract. Funds are mathematically guaranteed to remain untouchable until both parties fulfill the agreement conditions (e.g., check-in confirmation or timeline expiration).
+Rent and security deposits are locked in the `VaultStayCore` smart contract. Funds are mathematically guaranteed to remain untouchable until both parties fulfill the agreement conditions.
 
 ### ⚡ Instant, Automated Payouts
-Upon the checkout date (`endDate`), the smart contract automatically permits the landlord to claim the rent and the tenant to withdraw their security deposit. No waiting 3-5 business days for bank transfers.
+Upon the checkout date, the smart contract automatically permits the landlord to claim the rent and the tenant to withdraw their security deposit. 
 
 ### 🛡️ Smart Cancellation Policies
 VaultStay enforces strict, code-level cancellation logic:
@@ -22,27 +70,20 @@ VaultStay enforces strict, code-level cancellation logic:
 - **Post-Check-In (Active Cancel)**: If cancelled mid-stay, the landlord retains the rent, but the smart contract splits and refunds the security deposit automatically to mitigate damages.
 
 ### 🌐 Rich Web3 Dashboard
-A modern Next.js 14 App Router application featuring:
-- **Live On-Chain Data**: Multicall data fetching directly from the Sepolia testnet.
-- **Bento Grid UI**: Premium, dark-mode cyberpunk aesthetics with fluid Framer Motion animations.
-- **Role-Based Views**: Context-aware dashboards that adapt whether you are acting as the Tenant or the Landlord.
+A modern Next.js 14 App Router application featuring Live On-Chain Data via multicall, Bento Grid UI, and Role-Based context-aware dashboards.
 
 ---
 
 ## 🏗️ Architecture & Tech Stack
 
-VaultStay is built as a modern monorepo dividing the blockchain logic from the client interface.
-
 ### Smart Contracts (Hardhat)
 - **Solidity `^0.8.20`**: Strictly typed, secure contract logic.
-- **OpenZeppelin**: Utilizing `ReentrancyGuard` to prevent re-entrancy attacks during fund withdrawals.
 - **Hardhat & Chai**: Comprehensive test suite covering happy paths, cancellations, and malicious access attempts.
 
 ### Frontend App (Next.js)
 - **Framework**: Next.js 14 (App Router), React 18.
-- **Styling**: Tailwind CSS, custom neon gradients, and CSS keyframe animations.
-- **Web3 Integration**: `wagmi` v2, `viem`, and `RainbowKit` for seamless, secure wallet connection.
-- **UI Libraries**: Lucide Icons, Framer Motion.
+- **Styling**: Tailwind CSS, custom neon gradients.
+- **Web3 Integration**: `wagmi` v2, `viem`, and `RainbowKit`.
 
 ---
 
@@ -54,26 +95,16 @@ rental_blockchain_project/
 │   ├── contracts/               # Solidity Smart Contracts
 │   │   └── VaultStayCore.sol    # Core Escrow Logic
 │   ├── test/                    # Hardhat TypeScript Tests
-│   │   └── escrow.test.ts
 │   ├── scripts/                 # Deployment scripts
-│   │   └── deploy.ts
 │   └── frontend/                # Next.js 14 Web Application
-│       ├── app/                 # App Router Pages (Home, Dashboard, Agreement Detail)
-│       ├── components/          # Reusable UI (BookingCard, EscrowTimeline, Navbar)
-│       ├── lib/                 # Core utilities (constants, Wagmi hooks)
-│       └── public/              # Generated AI Assets
+│       ├── app/                 # App Router Pages
+│       ├── components/          # Reusable UI 
+│       └── lib/                 # Core utilities & Wagmi configuration
 ```
 
 ---
 
 ## 🚀 Getting Started
-
-Follow these instructions to run the VaultStay protocol locally.
-
-### Prerequisites
-- Node.js (v18+)
-- npm or yarn
-- MetaMask (or any Web3 Wallet) configured for the **Sepolia Testnet**.
 
 ### 1. Clone the Repository
 ```bash
@@ -81,43 +112,27 @@ git clone https://github.com/testing-archit/rental_blockchain_project.git
 cd rental_blockchain_project/vaultstay
 ```
 
-### 2. Smart Contract Setup & Testing
-Install blockchain dependencies and run the internal Hardhat tests:
+### 2. Smart Contract Setup
 ```bash
 npm install
 npx hardhat compile
 npx hardhat test
 ```
-*All 5 core tests (creation, funding, check-in, completion, and cancellation scenarios) should pass.*
+*All core tests (creation, funding, check-in, completion, and cancellation scenarios) should pass.*
 
-### 3. Deploying Contracts (Optional)
-The contract is already live on Sepolia. But to deploy your own instance:
-1. Create a `.env` in the `vaultstay/` directory.
-2. Add `SEPOLIA_RPC_URL=...` and `PRIVATE_KEY=...`
-3. Run `npx hardhat run scripts/deploy.ts --network sepolia`
-4. Copy the output address to `frontend/lib/constants.ts` -> `ESCROW_CONTRACT_ADDRESS`.
-
-### 4. Running the Frontend
+### 3. Running the Connected Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Open `http://localhost:3000` in your browser. Connect your wallet (make sure it's on Sepolia) and start testing the escrow flow!
+Open `http://localhost:3000` in your browser. Connect a wallet (e.g., MetaMask) configured for the **Sepolia Testnet**.
 
 ---
 
 ## 🔗 Live Deployment Details
 - **Network**: Sepolia Testnet
 - **Contract Address**: [`0xDD9b3CC1657e74cBF44B8e4894c005940f904820`](https://sepolia.etherscan.io/address/0xDD9b3CC1657e74cBF44B8e4894c005940f904820)
-- **Frontend Framework**: Next.js 14
-
----
-
-## 🛡️ Security Considerations
-- **Non-Custodial**: VaultStay developers have zero access to locked funds. 
-- **Double-Withdrawal Protection**: The `refundDeposit` logic specifically zeroes out the user's mapped deposit balance *before* executing the transfer, adhering to the Checks-Effects-Interactions pattern.
-- **Time-Locks**: Rent is securely locked until the pre-agreed `endDate` block timestamp passes, eliminating landlord rug-pulls.
 
 ## 📄 License
 This project is open-source and meant for educational and demonstrative purposes within the Web3 ecosystem.
