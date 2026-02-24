@@ -236,7 +236,7 @@ export default function Home() {
               <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} className="bg-black/50 backdrop-blur-xl rounded-2xl p-8 border border-white/10 hover:border-primary/50 transition-colors shadow-2xl">
                 <Coins className="text-primary mb-5" size={32} />
                 <h4 className="text-xl font-display font-bold mb-3 text-white">Revenue Strategy</h4>
-                <p className="text-sm text-white/60 leading-relaxed"><strong>Freemium Protocol:</strong> Flat 0% omission fee on rent. Monetized via premium up-sells like ZK-Proof Reputation Passports and 1% fiat credit-card onramps.</p>
+                <p className="text-sm text-white/60 leading-relaxed"><strong>Freemium Protocol:</strong> Flat 0% commission fee on rent. Monetized via premium up-sells like ZK-Proof Reputation Passports and 1% fiat credit-card onramps.</p>
               </motion.div>
 
               <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="bg-black/50 backdrop-blur-xl rounded-2xl p-8 border border-white/10 hover:border-secondary/50 transition-colors shadow-2xl">
@@ -251,7 +251,7 @@ export default function Home() {
                 </div>
                 <div className="text-center sm:text-left">
                   <h4 className="text-xl font-display font-bold mb-2 text-white">Hyper-Deflationary Cost Structure</h4>
-                  <p className="text-sm text-white/70 leading-relaxed">Near-zero infrastructure costs. By hosting state directly on the Ethereum Virtual Machine (EVM), heavy server arrays and database maintenance overhead is entirely bypassed, allowing margins impossibl for Web2 competitors.</p>
+                  <p className="text-sm text-white/70 leading-relaxed">Near-zero infrastructure costs. By hosting state directly on the Ethereum Virtual Machine (EVM), heavy server arrays and database maintenance overhead is entirely bypassed, allowing margins impossible for Web2 competitors.</p>
                 </div>
               </motion.div>
             </div>
@@ -268,6 +268,5 @@ export default function Home() {
         </Link>
       </div>
     </div>
-    </div >
   );
 }
