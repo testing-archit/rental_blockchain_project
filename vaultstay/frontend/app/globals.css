@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-white antialiased;
+    background-image: radial-gradient(circle at 50% 0%, rgba(108, 92, 231, 0.15), transparent 70%);
+    background-origin: border-box;
+    background-attachment: fixed;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-card/60 backdrop-blur-xl border border-white/10 shadow-2xl;
+  }
+  
+  .glass-panel-hover {
+    @apply glass-panel hover:bg-card/80 hover:border-primary/50 transition-all duration-300;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
+  }
+
+  .neon-glow {
+    box-shadow: 0 0 15px rgba(108, 92, 231, 0.3), 0 0 30px rgba(0, 245, 212, 0.1);
+  }
+  
+  .neon-border {
+    @apply border border-primary/50 hover:border-secondary/80 hover:shadow-[0_0_15px_rgba(0,245,212,0.4)] transition-all duration-300;
+  }
+}
