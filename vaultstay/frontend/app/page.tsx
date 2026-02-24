@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, Zap, Lock, Globe, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowRight, ShieldCheck, Zap, Lock, Globe, CheckCircle2, XCircle, BrainCircuit, Code2, Network, Coins, Users, Cpu, GraduationCap } from "lucide-react";
 import Image from "next/image";
 
 export default function Home() {
@@ -167,6 +167,96 @@ export default function Home() {
               </tr>
             </tbody>
           </table>
+        </div>
+
+        {/* ─── Academic Problem Analysis & Design ─── */}
+        <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12 mb-32" id="academic">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-panel border-white/10 text-white/70 text-sm font-medium tracking-wide mb-6">
+              <GraduationCap size={16} className="text-primary" /> Academic Research Framework
+            </div>
+            <h2 className="text-4xl font-display font-bold mb-6">Problem Analysis & System Design</h2>
+            <p className="text-lg text-white/50">Addressing core inefficiencies in centralized hospitality through algorithmic decentralization.</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Card 1: Problem Domain */}
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden group hover:border-red-500/30 transition-colors">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-bl-full blur-2xl group-hover:bg-red-500/20 transition-colors"></div>
+              <BrainCircuit className="text-red-400 mb-6" size={36} />
+              <h3 className="text-2xl font-display font-bold mb-4 text-white">Problem Domain</h3>
+              <ul className="space-y-4 text-white/60">
+                <li className="flex items-start gap-3"><span className="text-red-400 font-bold mt-1">•</span> <p><strong>Custodial Risk:</strong> Platforms hold both renter deposit and host revenue, creating severe single-point-of-failure risks.</p></li>
+                <li className="flex items-start gap-3"><span className="text-red-400 font-bold mt-1">•</span> <p><strong>High Friction:</strong> Monopolies extract 15-20% service fees while delaying payouts by 3-5 business days.</p></li>
+                <li className="flex items-start gap-3"><span className="text-red-400 font-bold mt-1">•</span> <p><strong>Opaque Resolution:</strong> Dispute handling relies on arbitrary human intervention rather than transparent logic.</p></li>
+              </ul>
+            </motion.div>
+
+            {/* Card 2: Methodology */}
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden group hover:border-primary/30 transition-colors">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-bl-full blur-2xl group-hover:bg-primary/20 transition-colors"></div>
+              <Network className="text-primary mb-6" size={36} />
+              <h3 className="text-2xl font-display font-bold mb-4 text-white">Objectives & Methodology</h3>
+              <ul className="space-y-4 text-white/60">
+                <li className="flex items-start gap-3"><span className="text-primary font-bold mt-1">1.</span> <p><strong>Smart Contracts:</strong> Encoding the rental agreement (Rent, Deposit, Dates) immutably on the Ethereum Sepolia network.</p></li>
+                <li className="flex items-start gap-3"><span className="text-primary font-bold mt-1">2.</span> <p><strong>State Machine:</strong> Escrow lifecycle moves strictly through <code className="text-primary/80 bg-primary/10 px-1 rounded border border-primary/20 mt-1 inline-block">Created/Funded/Active/Completed</code>.</p></li>
+                <li className="flex items-start gap-3"><span className="text-primary font-bold mt-1">3.</span> <p><strong>Non-Custodial Frontend:</strong> A Next.js dApp interacting directly with RPC nodes, isolating funds from developers.</p></li>
+              </ul>
+            </motion.div>
+
+            {/* Card 3: Algorithms */}
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }} className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden group hover:border-secondary/30 transition-colors">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/10 rounded-bl-full blur-2xl group-hover:bg-secondary/20 transition-colors"></div>
+              <Code2 className="text-secondary mb-6" size={36} />
+              <h3 className="text-2xl font-display font-bold mb-4 text-white">Algorithmic Relevance</h3>
+              <ul className="space-y-4 text-white/60">
+                <li className="flex items-start gap-3"><span className="text-secondary font-bold mt-1">•</span> <p><strong>Time-Locked Hooks:</strong> Using <code className="text-secondary/80 bg-secondary/10 px-1 rounded border border-secondary/20">block.timestamp</code> to compute cancellation eligibility bounds atomically.</p></li>
+                <li className="flex items-start gap-3"><span className="text-secondary font-bold mt-1">•</span> <p><strong>CEI Pattern:</strong> Enforcing Checks-Effects-Interactions and <code className="text-secondary/80 bg-secondary/10 px-1 rounded border border-secondary/20">ReentrancyGuard</code> to zero ledgers before invoking external calls.</p></li>
+                <li className="flex items-start gap-3"><span className="text-secondary font-bold mt-1">•</span> <p><strong>Atomic execution:</strong> Rent distribution and deposit unlocking execute in a single, unbreakable block.</p></li>
+              </ul>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* ─── Business Model ─── */}
+        <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12 mb-32" id="business">
+          <div className="glass-panel border border-white/10 rounded-[2.5rem] p-8 md:p-16 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-50 group-hover:opacity-100 transition-opacity duration-1000"></div>
+
+            <div className="relative z-10 flex flex-col xl:flex-row gap-12 lg:gap-24 items-center">
+              <div className="flex-1 space-y-8">
+                <div className="inline-flex items-center gap-2 text-primary font-bold tracking-widest text-sm uppercase">Business Model Canvas</div>
+                <h2 className="text-4xl md:text-5xl font-display font-bold">Disrupting a <span className="text-gradient drop-shadow-[0_0_20px_rgba(108,92,231,0.5)]"> $100B Market</span></h2>
+                <p className="text-xl text-white/60 font-light leading-relaxed">
+                  VaultStay replaces the high-overhead corporate hospitality model with hyper-efficient computational architecture, enabling 0% base fees for a massive competitive advantage.
+                </p>
+              </div>
+
+              <div className="flex-[1.5] grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} className="bg-black/50 backdrop-blur-xl rounded-2xl p-8 border border-white/10 hover:border-primary/50 transition-colors shadow-2xl">
+                  <Coins className="text-primary mb-5" size={32} />
+                  <h4 className="text-xl font-display font-bold mb-3 text-white">Revenue Strategy</h4>
+                  <p className="text-sm text-white/60 leading-relaxed"><strong>Freemium Protocol:</strong> Flat 0% omission fee on rent. Monetized via premium up-sells like ZK-Proof Reputation Passports and 1% fiat credit-card onramps.</p>
+                </motion.div>
+
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="bg-black/50 backdrop-blur-xl rounded-2xl p-8 border border-white/10 hover:border-secondary/50 transition-colors shadow-2xl">
+                  <Users className="text-secondary mb-5" size={32} />
+                  <h4 className="text-xl font-display font-bold mb-3 text-white">Target Audience</h4>
+                  <p className="text-sm text-white/60 leading-relaxed"><strong>Crypto-Native Nomads</strong> wanting seamless Web3 rentals, and <strong>Independent Landlords</strong> exhausted by 20% platform take-rates and delayed fiat payouts.</p>
+                </motion.div>
+
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: 0.2 }} className="sm:col-span-2 bg-gradient-to-r from-primary/20 to-secondary/10 backdrop-blur-xl rounded-2xl p-8 border border-primary/30 hover:border-primary/60 transition-colors flex flex-col sm:flex-row items-center sm:items-start gap-6 shadow-[0_0_30px_rgba(108,92,231,0.1)]">
+                  <div className="w-16 h-16 rounded-2xl bg-black/40 flex items-center justify-center shrink-0 border border-white/10">
+                    <Cpu className="text-white" size={32} />
+                  </div>
+                  <div className="text-center sm:text-left">
+                    <h4 className="text-xl font-display font-bold mb-2 text-white">Hyper-Deflationary Cost Structure</h4>
+                    <p className="text-sm text-white/70 leading-relaxed">Near-zero infrastructure costs. By hosting state directly on the Ethereum Virtual Machine (EVM), heavy server arrays and database maintenance overhead is entirely bypassed, allowing margins impossibl for Web2 competitors.</p>
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="mt-20 text-center">
