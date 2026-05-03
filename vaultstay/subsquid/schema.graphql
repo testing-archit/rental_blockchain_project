@@ -1,0 +1,29 @@
+type Rental @entity {
+  id: ID!
+  landlord: String! @index
+  tenant: String @index
+  rentAmount: BigInt!
+  depositAmount: BigInt!
+  startTimestamp: BigInt!
+  endTimestamp: BigInt!
+  state: Int! @index
+  ipfsCID: String!
+  createdAt: BigInt!
+  updatedAt: BigInt!
+}
+
+type Withdrawal @entity {
+  id: ID!
+  user: String! @index
+  amount: BigInt!
+  timestamp: BigInt!
+}
+
+type EscrowEvent @entity {
+  id: ID!
+  rentalId: BigInt! @index
+  type: String! @index
+  initiator: String @index
+  timestamp: BigInt!
+  txHash: String!
+}

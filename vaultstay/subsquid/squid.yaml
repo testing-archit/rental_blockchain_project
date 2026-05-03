@@ -1,0 +1,26 @@
+manifestVersion: subsquid.io/v0.1
+name: vaultstay-squid
+version: 1
+description: Indexer for VaultStay Escrow platform
+package: .
+processor:
+  name: eth-processor
+  type: ethereum
+  handler: src/main.ts
+  networks:
+    - name: sepolia
+      rpcUrl: ${SEPOLIA_RPC_URL}
+      archive: https://v2.archive.subsquid.io/network/ethereum-sepolia
+      contracts:
+        - name: VaultStayEscrow
+          address: "${CONTRACT_ADDRESS}"
+          abi: ../frontend/lib/abi.ts
+          events:
+            - RentalCreated
+            - RentalFunded
+            - RentalActivated
+            - RentalCompleted
+            - RentalCancelled
+            - DisputeRaised
+            - DisputeResolved
+            - Withdrawal
